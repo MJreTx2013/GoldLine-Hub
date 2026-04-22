@@ -262,7 +262,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
 .publisher-status.success{background:var(--grn-bg);color:var(--grn-txt);border:0.5px solid rgba(26,107,74,0.2);display:block}
 .publisher-status.error{background:#FDF0EE;color:#C0392B;border:0.5px solid rgba(192,57,43,0.2);display:block}
 .publisher-status.loading{background:var(--gbl);color:var(--gd);border:0.5px solid var(--brd);display:block}
-.publisher-charcount{font-size:11px;color:var(--txt3);text-align:right;margin-top:4px}
+.publisher-photo-section{margin-bottom:.85rem}
+.publisher-photo-label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--txt3);margin-bottom:.5rem;display:block}
+.publisher-photo-tabs{display:flex;gap:0;border:0.5px solid var(--brd2);border-radius:7px;overflow:hidden;margin-bottom:.65rem;width:fit-content}
+.photo-tab{font-size:11px;font-weight:500;padding:6px 14px;cursor:pointer;background:var(--cream);color:var(--txt3);border:none;font-family:'DM Sans',sans-serif;transition:all .2s}
+.photo-tab.active{background:var(--gl);color:var(--gd)}
+.photo-upload-area{
+  border:1.5px dashed var(--brd2);border-radius:8px;padding:1rem;
+  text-align:center;cursor:pointer;transition:all .2s;background:var(--cream);
+  position:relative;
+}
+.photo-upload-area:hover{border-color:var(--gold);background:var(--gl)}
+.photo-upload-area.has-image{border-style:solid;border-color:var(--gold);padding:.5rem}
+.photo-upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-upload-icon{font-size:24px;margin-bottom:.3rem}
+.photo-upload-text{font-size:12px;color:var(--txt3);line-height:1.5}
+.photo-preview{max-width:100%;max-height:180px;border-radius:6px;display:block;margin:0 auto}
+.photo-preview-wrap{position:relative;display:inline-block}
+.photo-remove{
+  position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+  background:#E24B4A;border-radius:50%;border:none;cursor:pointer;
+  color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;
+  line-height:1;
+}
+.photo-url-input{
+  width:100%;background:var(--cream);border:0.5px solid var(--brd2);border-radius:8px;
+  padding:10px 14px;font-size:13px;color:var(--txt);font-family:'DM Sans',sans-serif;
+  outline:none;transition:border-color .2s;
+}
+.photo-url-input:focus{border-color:var(--gold);background:#fff}
+.photo-url-input::placeholder{color:var(--txt3);font-size:12px}
 </style>
 </head>
 <body>
@@ -517,6 +546,37 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
         ></textarea>
         <div class="publisher-charcount"><span id="char-count">0</span> / 2200</div>
 
+        <!-- PHOTO SECTION -->
+        <div class="publisher-photo-section">
+          <span class="publisher-photo-label">📷 Attach a Photo (optional)</span>
+          <div class="publisher-photo-tabs">
+            <button class="photo-tab active" id="tab-upload" onclick="setPhotoTab('upload')">Upload File</button>
+            <button class="photo-tab" id="tab-url" onclick="setPhotoTab('url')">Image URL</button>
+          </div>
+
+          <!-- Upload from device -->
+          <div id="photo-upload-panel">
+            <div class="photo-upload-area" id="upload-area">
+              <input type="file" class="photo-upload-input" id="photo-file-input" accept="image/jpeg,image/png,image/gif,image/webp" onchange="handleFileSelect(event)">
+              <div id="upload-placeholder">
+                <div class="photo-upload-icon">🖼️</div>
+                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 4MB</span></div>
+              </div>
+              <div id="upload-preview" style="display:none">
+                <div class="photo-preview-wrap">
+                  <img id="photo-preview-img" class="photo-preview" src="" alt="Preview">
+                  <button class="photo-remove" onclick="removePhoto(event)" title="Remove photo">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image URL -->
+          <div id="photo-url-panel" style="display:none">
+            <input type="url" class="photo-url-input" id="photo-url-input" placeholder="https://example.com/your-photo.jpg — must be a publicly accessible image URL">
+          </div>
+        </div>
+
         <div class="publisher-controls">
           <div class="platform-btns">
             <button class="platform-btn active-fb" id="btn-fb" onclick="setPlatform('facebook')">
@@ -538,7 +598,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
 
         <div style="margin-top:.85rem;font-size:11px;color:var(--txt3);line-height:1.6;display:flex;gap:8px;align-items:flex-start">
           <span style="color:var(--gold);flex-shrink:0">◆</span>
-          <span><strong style="color:var(--txt2)">Note:</strong> Posts publish directly to the GoldLine Facebook Page and connected Instagram (@mbrealtor). Instagram requires an image — text-only posts will go to Facebook only. Agents can then share the GoldLine post to their personal profiles.</span>
+          <span><strong style="color:var(--txt2)">How it works:</strong> Posts publish directly to the GoldLine Facebook Page. When a photo is attached and "Both" is selected, it also posts to GoldLine Instagram (@mbrealtor). Agents can then share the GoldLine post to their personal profiles. Instagram requires a photo — text-only posts go to Facebook only.</span>
         </div>
       </div>
     </div>
@@ -638,12 +698,59 @@ const PASS = atob('R0BsZEwhbjNSRVA=');
 
 // ── Social Publisher State ──
 let currentPlatform = 'facebook';
+let currentPhotoTab = 'upload';
+let selectedFileData = null;
+let selectedFileName = null;
+let selectedFileMime = null;
 
 function setPlatform(p) {
   currentPlatform = p;
   document.getElementById('btn-fb').className = 'platform-btn' + (p==='facebook' ? ' active-fb' : '');
   document.getElementById('btn-ig').className = 'platform-btn' + (p==='instagram' ? ' active-ig' : '');
   document.getElementById('btn-both').className = 'platform-btn' + (p==='both' ? ' active-both' : '');
+}
+
+function setPhotoTab(tab) {
+  currentPhotoTab = tab;
+  document.getElementById('tab-upload').className = 'photo-tab' + (tab==='upload' ? ' active' : '');
+  document.getElementById('tab-url').className = 'photo-tab' + (tab==='url' ? ' active' : '');
+  document.getElementById('photo-upload-panel').style.display = tab==='upload' ? 'block' : 'none';
+  document.getElementById('photo-url-panel').style.display = tab==='url' ? 'block' : 'none';
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) {
+    alert('Photo must be under 4MB. Please choose a smaller image.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    // Store base64 data (strip the data URL prefix)
+    selectedFileData = dataUrl.split(',')[1];
+    selectedFileName = file.name;
+    selectedFileMime = file.type;
+    // Show preview
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('upload-preview').style.display = 'block';
+    document.getElementById('photo-preview-img').src = dataUrl;
+    document.getElementById('upload-area').classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  selectedFileData = null;
+  selectedFileName = null;
+  selectedFileMime = null;
+  document.getElementById('photo-file-input').value = '';
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('upload-area').classList.remove('has-image');
 }
 
 function updateCharCount() {
@@ -666,11 +773,23 @@ async function publishPost() {
   btn.textContent = 'Publishing...';
   setStatus('Sending to GoldLine accounts...', 'loading');
 
+  // Build payload
+  const payload = { message: content, platform: currentPlatform };
+
+  if (currentPhotoTab === 'upload' && selectedFileData) {
+    payload.imageData = selectedFileData;
+    payload.imageName = selectedFileName;
+    payload.imageMime = selectedFileMime;
+  } else if (currentPhotoTab === 'url') {
+    const urlVal = document.getElementById('photo-url-input').value.trim();
+    if (urlVal) payload.imageUrl = urlVal;
+  }
+
   try {
     const res = await fetch('/.netlify/functions/post-social', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: content, platform: currentPlatform })
+      body: JSON.stringify(payload)
     });
 
     const data = await res.json();
@@ -685,7 +804,7 @@ async function publishPost() {
         type = 'error';
       }
     }
-    if (currentPlatform === 'instagram' || currentPlatform === 'both') {
+    if (currentPlatform === 'both') {
       if (data.instagram?.success) {
         msg += '✓ Posted to GoldLine Instagram (@mbrealtor). ';
       } else if (data.instagram) {
@@ -695,10 +814,14 @@ async function publishPost() {
     }
 
     setStatus(msg.trim() || 'Done!', type);
-    if (type === 'success') {
+
+    if (data.facebook?.success) {
       document.getElementById('post-content').value = '';
       updateCharCount();
+      removePhoto({ preventDefault: ()=>{}, stopPropagation: ()=>{} });
+      document.getElementById('photo-url-input').value = '';
     }
+
   } catch(e) {
     setStatus('Connection error — please try again or contact MJ.', 'error');
   }
