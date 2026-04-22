@@ -46,19 +46,19 @@ function postJSON(url, body) {
 
 function postMultipart(url, fields, imageBuffer, filename, mimeType) {
   return new Promise((resolve, reject) => {
-    const boundary = '----FormBoundary' + Math.random().toString(36).substr(2);
+    const boundary = '----GoldLineBoundary' + Date.now().toString(36);
     const urlObj = new URL(url);
-    let bodyParts = [];
+    let parts = [];
 
     for (const [key, value] of Object.entries(fields)) {
-      bodyParts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`));
+      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`));
     }
 
-    bodyParts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="source"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
-    bodyParts.push(imageBuffer);
-    bodyParts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="source"; filename="${filename}"\r\nContent-Type: ${mimeType}\r\n\r\n`));
+    parts.push(imageBuffer);
+    parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
 
-    const body = Buffer.concat(bodyParts);
+    const body = Buffer.concat(parts);
     const options = {
       hostname: urlObj.hostname,
       path: urlObj.pathname + urlObj.search,
@@ -83,6 +83,96 @@ function postMultipart(url, fields, imageBuffer, filename, mimeType) {
   });
 }
 
+// Parse multipart form data from Netlify event
+function parseMultipart(event) {
+  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+  if (!boundaryMatch) return null;
+
+  const boundary = boundaryMatch[1];
+  const bodyBuffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8');
+  const boundaryBuf = Buffer.from(`--${boundary}`);
+
+  const result = { fields: {}, file: null };
+  const parts = [];
+
+  let start = 0;
+  let pos = 0;
+
+  while (pos < bodyBuffer.length) {
+    const idx = bodyBuffer.indexOf(boundaryBuf, pos);
+    if (idx === -1) break;
+    if (start > 0) {
+      parts.push(bodyBuffer.slice(start, idx - 2)); // -2 for \r\n before boundary
+    }
+    pos = idx + boundaryBuf.length + 2; // skip boundary + \r\n
+    start = pos;
+  }
+
+  for (const part of parts) {
+    if (part.length === 0) continue;
+
+    // Find end of headers
+    const headerEnd = part.indexOf('\r\n\r\n');
+    if (headerEnd === -1) continue;
+
+    const headerStr = part.slice(0, headerEnd).toString('utf8');
+    const content = part.slice(headerEnd + 4);
+
+    // Remove trailing \r\n if present
+    const trimmedContent = content[content.length - 2] === 13 && content[content.length - 1] === 10
+      ? content.slice(0, -2)
+      : content;
+
+    const nameMatch = headerStr.match(/name="([^"]+)"/);
+    const filenameMatch = headerStr.match(/filename="([^"]+)"/);
+    const contentTypeMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/);
+
+    if (!nameMatch) continue;
+    const name = nameMatch[1];
+
+    if (filenameMatch) {
+      result.file = {
+        filename: filenameMatch[1],
+        mimeType: contentTypeMatch ? contentTypeMatch[1].trim() : 'image/jpeg',
+        data: trimmedContent
+      };
+    } else {
+      result.fields[name] = trimmedContent.toString('utf8');
+    }
+  }
+
+  return result;
+}
+
+async function postToInstagram(pageId, pageToken, imageUrl, caption) {
+  const igAccountRes = await getJSON(`https://graph.facebook.com/v25.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`);
+  const igId = igAccountRes?.instagram_business_account?.id;
+
+  if (!igId) {
+    return { success: false, error: 'Instagram Business Account not connected — check Meta Business Suite' };
+  }
+
+  const containerRes = await postJSON(
+    `https://graph.facebook.com/v25.0/${igId}/media`,
+    { image_url: imageUrl, caption: caption, access_token: pageToken }
+  );
+
+  if (!containerRes.id) {
+    return { success: false, error: containerRes.error?.message || 'Instagram container creation failed' };
+  }
+
+  const publishRes = await postJSON(
+    `https://graph.facebook.com/v25.0/${igId}/media_publish`,
+    { creation_id: containerRes.id, access_token: pageToken }
+  );
+
+  if (publishRes.id) {
+    return { success: true, id: publishRes.id };
+  }
+  return { success: false, error: publishRes.error?.message || 'Instagram publish failed' };
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -95,11 +185,35 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   if (!PAGE_ID || !PAGE_TOKEN) return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server configuration error — contact MJ' }) };
 
-  let body;
-  try { body = JSON.parse(event.body); }
-  catch(e) { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid request body' }) }; }
+  const contentType = (event.headers['content-type'] || event.headers['Content-Type'] || '');
+  const isMultipart = contentType.includes('multipart/form-data');
 
-  const { message, platform, imageData, imageUrl, imageName, imageMime } = body;
+  let message, platform, imageUrl, imageBuffer, imageName, imageMime;
+
+  if (isMultipart) {
+    // Parse FormData (file upload)
+    const parsed = parseMultipart(event);
+    if (!parsed) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Could not parse form data' }) };
+
+    message = parsed.fields.message;
+    platform = parsed.fields.platform || 'facebook';
+
+    if (parsed.file) {
+      imageBuffer = parsed.file.data;
+      imageName = parsed.file.filename;
+      imageMime = parsed.file.mimeType;
+    }
+  } else {
+    // Parse JSON
+    try {
+      const body = JSON.parse(event.body);
+      message = body.message;
+      platform = body.platform || 'facebook';
+      imageUrl = body.imageUrl;
+    } catch(e) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid request body' }) };
+    }
+  }
 
   if (!message || !message.trim()) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Message is required' }) };
@@ -111,19 +225,19 @@ exports.handler = async (event) => {
   // ── FACEBOOK ──
   if (platform === 'facebook' || platform === 'both') {
     try {
-      if (imageData) {
-        // Upload photo from base64
-        const imageBuffer = Buffer.from(imageData, 'base64');
-        const fname = imageName || 'photo.jpg';
-        const fmime = imageMime || 'image/jpeg';
+      if (imageBuffer) {
+        // Upload photo file
         const fbRes = await postMultipart(
           `https://graph.facebook.com/v25.0/${PAGE_ID}/photos`,
           { caption: message.trim(), access_token: PAGE_TOKEN },
-          imageBuffer, fname, fmime
+          imageBuffer,
+          imageName || 'photo.jpg',
+          imageMime || 'image/jpeg'
         );
+
         if (fbRes.id) {
           results.facebook = { success: true, id: fbRes.id };
-          // Try to get public photo URL for Instagram
+          // Get public URL for Instagram
           try {
             const photoData = await getJSON(`https://graph.facebook.com/v25.0/${fbRes.id}?fields=images&access_token=${PAGE_TOKEN}`);
             if (photoData.images && photoData.images.length > 0) {
@@ -168,33 +282,10 @@ exports.handler = async (event) => {
   if (platform === 'both') {
     const igImageUrl = fbPhotoUrl || imageUrl;
     if (!igImageUrl) {
-      results.instagram = { success: false, error: 'Instagram requires an image. Your Facebook post was published.' };
+      results.instagram = { success: false, error: 'Instagram requires an image. Your Facebook post was published successfully.' };
     } else {
       try {
-        const igAccountRes = await getJSON(`https://graph.facebook.com/v25.0/${PAGE_ID}?fields=instagram_business_account&access_token=${PAGE_TOKEN}`);
-        const igId = igAccountRes?.instagram_business_account?.id;
-
-        if (!igId) {
-          results.instagram = { success: false, error: 'Instagram Business Account not connected — check Meta Business Suite' };
-        } else {
-          const containerRes = await postJSON(
-            `https://graph.facebook.com/v25.0/${igId}/media`,
-            { image_url: igImageUrl, caption: message.trim(), access_token: PAGE_TOKEN }
-          );
-          if (!containerRes.id) {
-            results.instagram = { success: false, error: containerRes.error?.message || 'Instagram container creation failed' };
-          } else {
-            const publishRes = await postJSON(
-              `https://graph.facebook.com/v25.0/${igId}/media_publish`,
-              { creation_id: containerRes.id, access_token: PAGE_TOKEN }
-            );
-            if (publishRes.id) {
-              results.instagram = { success: true, id: publishRes.id };
-            } else {
-              results.instagram = { success: false, error: publishRes.error?.message || 'Instagram publish failed' };
-            }
-          }
-        }
+        results.instagram = await postToInstagram(PAGE_ID, PAGE_TOKEN, igImageUrl, message.trim());
       } catch(e) {
         results.instagram = { success: false, error: e.message };
       }

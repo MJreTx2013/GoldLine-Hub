@@ -773,26 +773,39 @@ async function publishPost() {
   btn.textContent = 'Publishing...';
   setStatus('Sending to GoldLine accounts...', 'loading');
 
-  // Build payload
-  const payload = { message: content, platform: currentPlatform };
-
-  if (currentPhotoTab === 'upload' && selectedFileData) {
-    payload.imageData = selectedFileData;
-    payload.imageName = selectedFileName;
-    payload.imageMime = selectedFileMime;
-  } else if (currentPhotoTab === 'url') {
-    const urlVal = document.getElementById('photo-url-input').value.trim();
-    if (urlVal) payload.imageUrl = urlVal;
-  }
-
   try {
-    const res = await fetch('/.netlify/functions/post-social', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    let res, data;
 
-    const data = await res.json();
+    // Check if we have a file upload
+    const fileInput = document.getElementById('photo-file-input');
+    const hasFile = currentPhotoTab === 'upload' && fileInput.files && fileInput.files[0];
+    const urlVal = currentPhotoTab === 'url' ? document.getElementById('photo-url-input').value.trim() : '';
+
+    if (hasFile) {
+      // Use FormData for file upload — bypasses JSON body size limits
+      const formData = new FormData();
+      formData.append('message', content);
+      formData.append('platform', currentPlatform);
+      formData.append('photo', fileInput.files[0]);
+
+      res = await fetch('/.netlify/functions/post-social', {
+        method: 'POST',
+        body: formData
+        // Note: DO NOT set Content-Type header — browser sets it automatically with boundary
+      });
+    } else {
+      // Text only or URL — use JSON as before
+      const payload = { message: content, platform: currentPlatform };
+      if (urlVal) payload.imageUrl = urlVal;
+
+      res = await fetch('/.netlify/functions/post-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    data = await res.json();
     let msg = '';
     let type = 'success';
 
