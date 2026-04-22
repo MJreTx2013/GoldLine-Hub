@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoldLine AI™ — Agent Hub</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#C9A84C;--gd:#8B6914;--gl:#FEF9EE;--cream:#F5F0E8;--cream2:#EDE8DC;
+  --gb:rgba(201,168,76,0.18);--gbl:rgba(201,168,76,0.10);
+  --txt:#1A1A16;--txt2:#6B6555;--txt3:#9A9080;
+  --brd:rgba(201,168,76,0.22);--brd2:rgba(201,168,76,0.35);
+  --card:#FFFFFF;--card2:#FAF7F0;
+  --radius:10px;--radius-lg:14px;
+  --teal:#2A9D8F;--teal-bg:#E8F5F3;--teal-txt:#1A6B62;
+  --slate:#4A5568;--slate-bg:#EEF2FF;--slate-txt:#3730A3;
+  --grn-bg:#E8F5F0;--grn-txt:#1A6B4A;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);min-height:100vh}
+
+/* ── LOGIN ── */
+#login-screen{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:2rem;
+  background:var(--cream);
+}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:.4rem}
+.ld{width:16px;height:16px;background:var(--gold);transform:rotate(45deg);flex-shrink:0}
+.login-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--txt);letter-spacing:3px;text-transform:uppercase}
+.login-eyebrow{font-size:11px;color:var(--txt3);letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:2.5rem}
+.login-card{
+  background:var(--card);border:0.5px solid var(--brd2);border-radius:var(--radius-lg);
+  padding:2.25rem 2.5rem;width:100%;max-width:400px;text-align:center;
+  box-shadow:0 2px 24px rgba(0,0,0,0.06);
+}
+.login-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--txt);margin-bottom:4px}
+.login-title span{color:var(--gold)}
+.login-ai-tag{font-size:11px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:.5rem;display:block}
+.login-divider{display:flex;align-items:center;gap:10px;margin:1rem 0 1.25rem}
+.ldl{flex:1;height:0.5px;background:var(--brd)}
+.ldg{font-size:9px;color:var(--gold)}
+.login-hint{font-size:13px;color:var(--txt2);margin-bottom:1.5rem;line-height:1.6}
+.pw-wrap{position:relative;margin-bottom:1rem}
+.login-input{
+  width:100%;background:var(--cream);border:0.5px solid var(--brd2);border-radius:8px;
+  padding:13px 16px;font-size:14px;color:var(--txt);font-family:'DM Sans',sans-serif;
+  text-align:center;letter-spacing:3px;outline:none;
+}
+.login-input::placeholder{letter-spacing:1px;color:var(--txt3);font-size:13px}
+.login-input:focus{border-color:var(--gold);background:#fff}
+.login-btn{
+  width:100%;background:var(--gold);color:#fff;font-size:13px;font-weight:500;
+  padding:13px;border-radius:8px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;letter-spacing:.5px;transition:background .2s;
+}
+.login-btn:hover{background:var(--gd)}
+.login-error{font-size:12px;color:#E24B4A;margin-top:.75rem;min-height:18px}
+.login-contact{margin-top:1.5rem;font-size:12px;color:var(--txt3);line-height:1.7}
+.login-contact a{color:var(--gold);text-decoration:none}
+
+/* ── HUB ── */
+#hub-screen{display:none;min-height:100vh;background:var(--cream)}
+
+/* TOP NAV */
+.topnav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 2rem;border-bottom:0.5px solid var(--brd);
+  background:rgba(245,240,232,0.95);backdrop-filter:blur(8px);
+  position:sticky;top:0;z-index:100;
+}
+.nav-brand{display:flex;align-items:center;gap:10px}
+.nav-d{width:11px;height:11px;background:var(--gold);transform:rotate(45deg);flex-shrink:0}
+.nav-name{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--txt);letter-spacing:.5px}
+.nav-sep{font-size:12px;color:var(--brd2);margin:0 4px}
+.nav-tag{font-size:11px;color:var(--txt3);letter-spacing:1px}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-badge{font-size:10px;color:var(--gd);background:var(--gbl);border:0.5px solid var(--brd);padding:4px 10px;border-radius:20px;font-weight:500;letter-spacing:.5px}
+.logout-btn{font-size:11px;color:var(--txt3);background:transparent;border:0.5px solid var(--brd);padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.logout-btn:hover{border-color:var(--brd2);color:var(--txt2)}
+
+/* HERO — matching screenshot 5 */
+.hero{
+  background:var(--cream);border-bottom:0.5px solid var(--brd);
+  padding:3.5rem 2rem 3rem;text-align:center;
+}
+.hero-logo-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:.5rem}
+.hero-d{width:18px;height:18px;background:var(--gold);transform:rotate(45deg);flex-shrink:0}
+.hero-brow{font-size:11px;font-weight:500;letter-spacing:4px;text-transform:uppercase;color:var(--gd)}
+.hero-title{font-family:'Playfair Display',serif;font-size:42px;font-weight:700;color:var(--txt);margin-bottom:.5rem}
+.hero-title span{color:var(--gold)}
+.hero-sub{font-size:15px;color:var(--txt2);font-style:italic;max-width:600px;margin:0 auto 2rem;line-height:1.6}
+.hero-divider{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:0}
+.hero-dline{width:120px;height:0.5px;background:var(--brd2)}
+.hero-dgem{font-size:10px;color:var(--gold)}
+
+/* PHASE LABEL */
+.phase-intro{
+  max-width:920px;margin:0 auto;padding:2.5rem 2rem 0;
+}
+.phase-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--card);border:0.5px solid var(--brd2);border-radius:20px;
+  padding:5px 16px;font-size:11px;font-weight:500;color:var(--gd);
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:1rem;
+}
+.phase-dot{width:6px;height:6px;background:var(--gold);border-radius:50%;display:inline-block}
+.phase-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--txt);margin-bottom:.35rem}
+.phase-title span{color:var(--gold)}
+.phase-sub{font-size:13px;color:var(--txt2);font-style:italic;margin-bottom:1.75rem;line-height:1.5}
+.phase-rule{height:0.5px;background:var(--brd);margin-bottom:1.75rem;display:flex;align-items:center;justify-content:center}
+.phase-rule-gem{font-size:8px;color:var(--gold);background:var(--cream);padding:0 8px}
+
+/* CARDS GRID */
+.section{max-width:920px;margin:0 auto;padding:0 2rem 2.5rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+
+/* GPT CARD — matching screenshots */
+.gpt-card{
+  background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius-lg);
+  overflow:hidden;transition:box-shadow .2s,border-color .2s;
+}
+.gpt-card:hover{border-color:var(--brd2);box-shadow:0 4px 20px rgba(0,0,0,0.06)}
+
+/* BUTTON-STYLE CARD (Phase 1 — matches screenshots 1,6,8) */
+.gpt-btn-card{
+  background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius-lg);
+  padding:1.1rem 1.25rem;display:flex;align-items:center;gap:14px;
+  transition:box-shadow .2s,border-color .2s;text-decoration:none;cursor:pointer;
+}
+.gpt-btn-card:hover{border-color:var(--brd2);box-shadow:0 4px 20px rgba(0,0,0,0.06)}
+.btn-card-icon{
+  width:44px;height:44px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:22px;flex-shrink:0;border:0.5px solid var(--brd);
+}
+.btn-card-icon.cream{background:var(--gl)}
+.btn-card-icon.teal{background:var(--teal-bg)}
+.btn-card-icon.teal-dark{background:var(--teal-bg)}
+.btn-card-body{flex:1;min-width:0}
+.btn-card-name{font-size:16px;font-weight:500;color:var(--txt);margin-bottom:3px}
+.btn-card-sub{font-size:12px;color:var(--txt2)}
+.btn-card-badge{
+  display:inline-block;margin-top:7px;font-size:10px;font-weight:500;
+  padding:3px 10px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase;
+}
+.badge-gold{background:var(--gbl);color:var(--gd);border:0.5px solid var(--brd)}
+.badge-teal{background:var(--teal-bg);color:var(--teal-txt)}
+.badge-slate{background:var(--slate-bg);color:var(--slate-txt)}
+
+/* ENGINE CARD (Phase 2 — matches screenshots 2,3,4) */
+.engine-card{
+  background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius-lg);
+  overflow:hidden;transition:box-shadow .2s,border-color .2s;
+}
+.engine-card:hover{border-color:var(--brd2);box-shadow:0 4px 20px rgba(0,0,0,0.06)}
+.engine-top{padding:1.1rem 1.25rem;border-bottom:0.5px solid var(--brd)}
+.engine-num{font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--gd);margin-bottom:5px}
+.engine-name{font-size:18px;font-weight:700;color:var(--txt);margin-bottom:3px;font-family:'Playfair Display',serif}
+.engine-sub{font-size:12px;color:var(--txt2)}
+.engine-body{padding:1rem 1.25rem}
+.engine-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
+.epill{
+  font-size:11px;padding:4px 10px;border-radius:20px;
+  background:var(--gbl);color:var(--gd);border:0.5px solid var(--brd);
+}
+.epill.teal{background:var(--teal-bg);color:var(--teal-txt);border-color:transparent}
+.epill.slate{background:var(--slate-bg);color:var(--slate-txt);border-color:transparent}
+.epill.grn{background:var(--grn-bg);color:var(--grn-txt);border-color:transparent}
+.engine-desc{font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:1rem}
+.engine-launch{
+  display:block;text-align:center;background:var(--cream);border:0.5px solid var(--brd2);
+  color:var(--gd);font-size:12px;font-weight:500;padding:9px;border-radius:8px;
+  text-decoration:none;font-family:'DM Sans',sans-serif;transition:all .2s;
+}
+.engine-launch:hover{background:var(--gbl)}
+
+/* SECTION DIVIDER */
+.section-div{
+  max-width:920px;margin:2rem auto 0;padding:0 2rem;
+  display:flex;align-items:center;gap:10px;
+}
+.sdline{flex:1;height:0.5px;background:var(--brd)}
+.sdgem{font-size:8px;color:var(--gold)}
+
+/* PLAYBOOKS */
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.doc-card{
+  background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius);
+  padding:1rem 1.25rem;transition:border-color .2s,box-shadow .2s;
+}
+.doc-card:hover{border-color:var(--brd2);box-shadow:0 4px 16px rgba(0,0,0,0.05)}
+.doc-phase{font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt3);margin-bottom:4px}
+.doc-name{font-size:14px;font-weight:500;color:var(--txt);margin-bottom:5px;line-height:1.3}
+.doc-desc{font-size:12px;color:var(--txt2);line-height:1.5;margin-bottom:.9rem}
+.doc-btn{
+  display:inline-block;font-size:11px;font-weight:500;padding:6px 14px;
+  border-radius:6px;border:0.5px solid var(--brd2);color:var(--gd);
+  background:var(--gbl);cursor:pointer;text-decoration:none;
+  font-family:'DM Sans',sans-serif;transition:background .2s;
+}
+.doc-btn:hover{background:var(--gl)}
+
+/* QUICK REF */
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:10px}
+.qr-card{background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius);padding:.9rem 1.1rem}
+.qr-situation{font-size:11px;font-weight:500;color:var(--gd);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.45rem}
+.qr-gpt{font-size:13px;font-weight:500;color:var(--txt);margin-bottom:.3rem}
+.qr-tip{font-size:11px;color:var(--txt3);line-height:1.5}
+
+/* HOWTO */
+.howto-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:2.5rem}
+.howto-card{background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius);padding:.9rem 1.1rem}
+.howto-num{width:26px;height:26px;border-radius:50%;background:var(--gbl);border:0.5px solid var(--brd2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--gd);margin-bottom:.65rem}
+.howto-t{font-size:13px;font-weight:500;color:var(--txt);margin-bottom:.3rem}
+.howto-d{font-size:12px;color:var(--txt2);line-height:1.5}
+
+/* FOOTER */
+.hub-footer{border-top:0.5px solid var(--brd);padding:1.5rem 2rem;max-width:920px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.footer-brand{display:flex;align-items:center;gap:8px}
+.fd{width:9px;height:9px;background:var(--gold);transform:rotate(45deg)}
+.footer-name{font-family:'Playfair Display',serif;font-size:13px;color:var(--txt2);margin-left:6px}
+.footer-tag{font-size:11px;color:var(--txt3)}
+/* ── SOCIAL PUBLISHER ── */
+.publisher-wrap{background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius-lg);overflow:hidden;margin-top:14px}
+.publisher-top{padding:1.1rem 1.25rem;border-bottom:0.5px solid var(--brd);display:flex;align-items:center;gap:12px}
+.publisher-icon{width:36px;height:36px;background:var(--teal-bg);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.publisher-title{font-size:15px;font-weight:600;color:var(--txt);margin-bottom:2px}
+.publisher-sub{font-size:11px;color:var(--txt3)}
+.publisher-body{padding:1.1rem 1.25rem}
+.publisher-textarea{
+  width:100%;min-height:120px;background:var(--cream);border:0.5px solid var(--brd2);
+  border-radius:8px;padding:12px 14px;font-size:13px;color:var(--txt);
+  font-family:'DM Sans',sans-serif;line-height:1.6;resize:vertical;outline:none;
+  transition:border-color .2s;
+}
+.publisher-textarea:focus{border-color:var(--gold);background:#fff}
+.publisher-textarea::placeholder{color:var(--txt3)}
+.publisher-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:.85rem}
+.platform-btns{display:flex;gap:7px}
+.platform-btn{
+  display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;
+  border:0.5px solid var(--brd2);background:var(--cream);cursor:pointer;
+  font-size:12px;font-weight:500;color:var(--txt2);font-family:'DM Sans',sans-serif;
+  transition:all .2s;
+}
+.platform-btn:hover{border-color:var(--brd2);background:var(--gl)}
+.platform-btn.active-fb{background:#1877F215;border-color:#1877F2;color:#1877F2}
+.platform-btn.active-ig{background:#E1306C15;border-color:#E1306C;color:#E1306C}
+.platform-btn.active-both{background:var(--gbl);border-color:var(--gold);color:var(--gd)}
+.post-btn{
+  background:var(--gold);color:#fff;border:none;border-radius:8px;
+  padding:9px 22px;font-size:13px;font-weight:500;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:background .2s;flex-shrink:0;
+}
+.post-btn:hover{background:var(--gd)}
+.post-btn:disabled{background:var(--txt3);cursor:not-allowed}
+.publisher-status{
+  margin-top:.75rem;padding:.65rem .9rem;border-radius:7px;
+  font-size:12px;line-height:1.5;display:none;
+}
+.publisher-status.success{background:var(--grn-bg);color:var(--grn-txt);border:0.5px solid rgba(26,107,74,0.2);display:block}
+.publisher-status.error{background:#FDF0EE;color:#C0392B;border:0.5px solid rgba(192,57,43,0.2);display:block}
+.publisher-status.loading{background:var(--gbl);color:var(--gd);border:0.5px solid var(--brd);display:block}
+.publisher-photo-section{margin-bottom:.85rem}
+.publisher-photo-label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--txt3);margin-bottom:.5rem;display:block}
+.publisher-photo-tabs{display:flex;gap:0;border:0.5px solid var(--brd2);border-radius:7px;overflow:hidden;margin-bottom:.65rem;width:fit-content}
+.photo-tab{font-size:11px;font-weight:500;padding:6px 14px;cursor:pointer;background:var(--cream);color:var(--txt3);border:none;font-family:'DM Sans',sans-serif;transition:all .2s}
+.photo-tab.active{background:var(--gl);color:var(--gd)}
+.photo-upload-area{
+  border:1.5px dashed var(--brd2);border-radius:8px;padding:1rem;
+  text-align:center;cursor:pointer;transition:all .2s;background:var(--cream);
+  position:relative;
+}
+.photo-upload-area:hover{border-color:var(--gold);background:var(--gl)}
+.photo-upload-area.has-image{border-style:solid;border-color:var(--gold);padding:.5rem}
+.photo-upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-upload-icon{font-size:24px;margin-bottom:.3rem}
+.photo-upload-text{font-size:12px;color:var(--txt3);line-height:1.5}
+.photo-preview{max-width:100%;max-height:180px;border-radius:6px;display:block;margin:0 auto}
+.photo-preview-wrap{position:relative;display:inline-block}
+.photo-remove{
+  position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+  background:#E24B4A;border-radius:50%;border:none;cursor:pointer;
+  color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;
+  line-height:1;
+}
+.photo-url-input{
+  width:100%;background:var(--cream);border:0.5px solid var(--brd2);border-radius:8px;
+  padding:10px 14px;font-size:13px;color:var(--txt);font-family:'DM Sans',sans-serif;
+  outline:none;transition:border-color .2s;
+}
+.photo-url-input:focus{border-color:var(--gold);background:#fff}
+.photo-url-input::placeholder{color:var(--txt3);font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="login-screen" style="display:flex">
+  <div class="login-logo">
+    <div class="ld"></div>
+    <span class="login-name">GoldLine Realty Partners</span>
+    <div class="ld"></div>
+  </div>
+  <div class="login-eyebrow" style="margin-bottom:2.5rem">Agent Hub &nbsp;·&nbsp; Restricted Access</div>
+
+  <div class="login-card">
+    <div class="login-title">GoldLine <span>AI™</span></div>
+    <span class="login-ai-tag">The Agent Advantage System</span>
+    <div class="login-divider"><div class="ldl"></div><div class="ldg">◆</div><div class="ldl"></div></div>
+    <div class="login-hint">This hub is for active GoldLine agents only.<br>Enter your agent access code to continue.</div>
+    <div class="pw-wrap">
+      <input type="password" class="login-input" id="pw-input" placeholder="Enter access code" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Access Agent Hub</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-contact">Need access? Contact your broker<br><a href="mailto:MJ@GoldLineREP.com">MJ@GoldLineREP.com</a></div>
+  </div>
+</div>
+
+<!-- ═══════ HUB ═══════ -->
+<div id="hub-screen" style="display:none">
+
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-d"></div>
+      <span class="nav-name">GoldLine AI™</span>
+      <span class="nav-sep">·</span>
+      <span class="nav-tag">Agent Hub</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-badge">Active Agent</span>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- HERO — matches screenshot 5 -->
+  <div class="hero">
+    <div class="hero-logo-row">
+      <div class="hero-d"></div>
+      <span class="hero-brow">GoldLine Realty Partners</span>
+      <div class="hero-d"></div>
+    </div>
+    <div class="hero-title">GoldLine <span>AI™</span></div>
+    <div class="hero-sub">The Agent Advantage System — Think, Speak, and Convert Like Top Producers</div>
+    <div class="hero-divider">
+      <div class="hero-dline"></div>
+      <div class="hero-dgem">◆</div>
+      <div class="hero-dline"></div>
+    </div>
+  </div>
+
+  <!-- HOW TO USE -->
+  <div class="phase-intro">
+    <div class="howto-grid">
+      <div class="howto-card">
+        <div class="howto-num">1</div>
+        <div class="howto-t">Open your GPT</div>
+        <div class="howto-d">Click any card below to open it in ChatGPT. A free account is required.</div>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">2</div>
+        <div class="howto-t">Read the playbook first</div>
+        <div class="howto-d">Download the playbook before your first use. It tells you what to type and when.</div>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">3</div>
+        <div class="howto-t">Use it on every deal</div>
+        <div class="howto-d">These tools are built for daily use — every listing, every buyer, every open house.</div>
+      </div>
+      <div class="howto-card">
+        <div class="howto-num">4</div>
+        <div class="howto-t">Questions? Ask your broker</div>
+        <div class="howto-d">Reach out to MJ directly at MJ@GoldLineREP.com anytime.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PHASE 1 ── -->
+  <div class="phase-intro" style="padding-top:0">
+    <div class="phase-badge"><span class="phase-dot"></span>Phase 1</div>
+    <div class="phase-title">GoldLine AI™ <span>Core Tools</span></div>
+    <div class="phase-sub">The Agent Advantage System — Think, Speak, and Convert Like Top Producers</div>
+    <div style="height:0.5px;background:var(--brd);position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.75rem">
+      <span style="font-size:8px;color:var(--gold);background:var(--cream);padding:0 10px">◆</span>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:0">
+    <div class="cards-grid">
+
+      <!-- Listing Domination GPT -->
+      <div class="gpt-btn-card" onclick="openLink('https://chatgpt.com/g/g-69bfea9e049c8191a030226c8bd8bfbb-goldline-listing-domination-gpt')" style="cursor:pointer">
+        <div class="btn-card-icon cream" style="font-size:22px">🏡</div>
+        <div class="btn-card-body">
+          <div class="btn-card-name">Listing Domination GPT</div>
+          <div class="btn-card-sub">SEO + AEO Descriptions · Buyer Psychology Language</div>
+          <span class="btn-card-badge badge-gold">Your Core Strength</span>
+        </div>
+      </div>
+
+      <!-- Conversion GPT -->
+      <div class="gpt-btn-card" onclick="openLink('https://chatgpt.com/g/g-69bfedb468788191920f174682b09ca8-goldline-conversion-client-control-gpt')" style="cursor:pointer">
+        <div class="btn-card-icon cream" style="font-size:22px">🤝</div>
+        <div class="btn-card-body">
+          <div class="btn-card-name">Conversion GPT</div>
+          <div class="btn-card-sub">Scripts · Objection Handlers · Text &amp; Email Frameworks</div>
+          <span class="btn-card-badge badge-slate">Agent Sales Engine</span>
+        </div>
+      </div>
+
+      <!-- Listing Launch Method Playbook -->
+      <div class="gpt-btn-card" onclick="openLink('https://drive.google.com/file/d/1v5aD7Ib7wit_vidnRIChVaJq4gdPs8GL/view?usp=drive_link')" style="cursor:pointer">
+        <div class="btn-card-icon cream" style="font-size:22px">📋</div>
+        <div class="btn-card-body">
+          <div class="btn-card-name">Listing Launch Method™</div>
+          <div class="btn-card-sub">6-Phase Playbook · Every Step · Every AI Tool</div>
+          <span class="btn-card-badge badge-gold">Start Here</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PHASE 2 ── -->
+  <div class="phase-intro">
+    <div class="phase-badge"><span class="phase-dot"></span>GoldLine AI™ — Phase 2</div>
+    <div class="phase-title">My <span>Competitive</span> Edge</div>
+    <div class="phase-sub">The system that turns agents into closers — and GoldLine into a brand no one can copy.</div>
+    <div style="height:0.5px;background:var(--brd);position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.75rem">
+      <span style="font-size:8px;color:var(--gold);background:var(--cream);padding:0 10px">◆</span>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:0">
+    <div class="cards-grid">
+
+      <!-- Engine 01 — Seller Psychology -->
+      <div class="engine-card">
+        <div class="engine-top">
+          <div class="engine-num">Engine 01</div>
+          <div class="engine-name">Seller Psychology Engine</div>
+          <div class="engine-sub">Scarcity · Social Proof · Timing Narratives</div>
+        </div>
+        <div class="engine-body">
+          <div class="engine-pills">
+            <span class="epill">Scarcity</span>
+            <span class="epill">Social proof</span>
+            <span class="epill">FOMO</span>
+            <span class="epill">Timing</span>
+            <span class="epill">Loss aversion</span>
+            <span class="epill">Anchoring</span>
+          </div>
+          <div class="engine-desc">Full prompt library trained on 6 seller psychology triggers. GPT generates listing appointment language, price reduction scripts, and urgency narratives on demand.</div>
+          <a class="engine-launch" href="#" onclick="openLink('https://chatgpt.com/g/g-69d548c907488191a187be8fbe5bea80-goldline-seller-psychology-engine');return false;">Open Seller Psychology Engine →</a>
+        </div>
+      </div>
+
+      <!-- Engine 02 — Simulator -->
+      <div class="engine-card">
+        <div class="engine-top">
+          <div class="engine-num">Engine 02</div>
+          <div class="engine-name">Listing Appointment Simulator</div>
+          <div class="engine-sub">Role-play · Pushback · Scored Debrief</div>
+        </div>
+        <div class="engine-body">
+          <div class="engine-pills">
+            <span class="epill slate">$400K seller</span>
+            <span class="epill slate">$900K Bridgeland</span>
+            <span class="epill slate">FSBO convert</span>
+            <span class="epill slate">Expired listing</span>
+            <span class="epill slate">Commission fight</span>
+          </div>
+          <div class="engine-desc">ChatGPT acts as a skeptical seller. Agent practices live. GPT scores the session across 5 dimensions and provides a written debrief.</div>
+          <a class="engine-launch" href="#" onclick="openLink('https://chatgpt.com/g/g-69d54c20c52081919780b35dd23e6e34-goldline-listing-appointment-simulator');return false;">Open Listing Simulator →</a>
+        </div>
+      </div>
+
+      <!-- Engine 03 — Playbooks -->
+      <div class="engine-card">
+        <div class="engine-top">
+          <div class="engine-num">Engine 03</div>
+          <div class="engine-name">GoldLine Playbooks</div>
+          <div class="engine-sub">Named Frameworks · Unfair Advantage</div>
+        </div>
+        <div class="engine-body">
+          <div class="engine-pills">
+            <span class="epill grn">Listing Launch Method</span>
+            <span class="epill grn">Buyer Control System</span>
+            <span class="epill grn">Open House Model</span>
+          </div>
+          <div class="engine-desc">Three proprietary step-by-step systems agents follow — not just prompts. Each has a name, a process, and a GPT that coaches them through it.</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <a class="engine-launch" href="#" onclick="openLink('https://docs.google.com/document/d/1uv20n3EypQ3kEoI2rh45uLnGV8AUvTGQ/edit?usp=drive_link');return false;">Download Listing Launch Method →</a>
+            <a class="engine-launch" href="#" onclick="openLink('https://docs.google.com/document/d/12erScQcpr9ufe6JJQ4WjnKkSRY4_9vPR/edit?usp=drive_link');return false;">Download Buyer Control System →</a>
+            <a class="engine-launch" href="#" onclick="openLink('https://docs.google.com/document/d/1YYwmjVoH4NZWYFOiW2FUpcZccovNBZKK/edit?usp=drive_link');return false;">Download Open House Model →</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PHASE 3 ── -->
+  <div class="phase-intro">
+    <div class="phase-badge"><span class="phase-dot"></span>GoldLine AI™ — Phase 3</div>
+    <div class="phase-title">Brand <span>&amp; Social</span> Publisher</div>
+    <div class="phase-sub">Create on-brand content with AI — then post directly to GoldLine's Facebook and Instagram in one click.</div>
+    <div style="height:0.5px;background:var(--brd);position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:1.75rem">
+      <span style="font-size:8px;color:var(--gold);background:var(--cream);padding:0 10px">◆</span>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:0">
+    <div class="cards-grid">
+
+      <!-- Brand Voice GPT -->
+      <div class="gpt-btn-card" onclick="openLink('https://chatgpt.com/g/g-69bfee7797cc8191a7915bb9ca14c3c8-goldline-brand-voice-attraction-gpt')" style="cursor:pointer">
+        <div class="btn-card-icon teal" style="font-size:20px;color:#2A9D8F">✦</div>
+        <div class="btn-card-body">
+          <div class="btn-card-name">GoldLine Brand Voice GPT</div>
+          <div class="btn-card-sub">Generate on-brand captions, hashtags &amp; content ideas</div>
+          <span class="btn-card-badge badge-teal">Step 1 — Create</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SOCIAL PUBLISHER PANEL -->
+    <div class="publisher-wrap">
+      <div class="publisher-top">
+        <div class="publisher-icon">📲</div>
+        <div>
+          <div class="publisher-title">GoldLine Social Publisher</div>
+          <div class="publisher-sub">Step 2 — Paste your content below and post directly to GoldLine's accounts</div>
+        </div>
+      </div>
+      <div class="publisher-body">
+        <textarea
+          class="publisher-textarea"
+          id="post-content"
+          placeholder="Paste your Brand Voice GPT content here, or write your post directly. This will publish to the GoldLine Facebook Page and/or Instagram account..."
+          oninput="updateCharCount()"
+          maxlength="2200"
+        ></textarea>
+        <div class="publisher-charcount"><span id="char-count">0</span> / 2200</div>
+
+        <!-- PHOTO SECTION -->
+        <div class="publisher-photo-section">
+          <span class="publisher-photo-label">📷 Attach a Photo (optional)</span>
+          <div class="publisher-photo-tabs">
+            <button class="photo-tab active" id="tab-upload" onclick="setPhotoTab('upload')">Upload File</button>
+            <button class="photo-tab" id="tab-url" onclick="setPhotoTab('url')">Image URL</button>
+          </div>
+
+          <!-- Upload from device -->
+          <div id="photo-upload-panel">
+            <div class="photo-upload-area" id="upload-area">
+              <input type="file" class="photo-upload-input" id="photo-file-input" accept="image/jpeg,image/png,image/gif,image/webp" onchange="handleFileSelect(event)">
+              <div id="upload-placeholder">
+                <div class="photo-upload-icon">🖼️</div>
+                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 4MB</span></div>
+              </div>
+              <div id="upload-preview" style="display:none">
+                <div class="photo-preview-wrap">
+                  <img id="photo-preview-img" class="photo-preview" src="" alt="Preview">
+                  <button class="photo-remove" onclick="removePhoto(event)" title="Remove photo">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image URL -->
+          <div id="photo-url-panel" style="display:none">
+            <input type="url" class="photo-url-input" id="photo-url-input" placeholder="https://example.com/your-photo.jpg — must be a publicly accessible image URL">
+          </div>
+        </div>
+
+        <div class="publisher-controls">
+          <div class="platform-btns">
+            <button class="platform-btn active-fb" id="btn-fb" onclick="setPlatform('facebook')">
+              <span>📘</span> Facebook
+            </button>
+            <button class="platform-btn" id="btn-ig" onclick="setPlatform('instagram')">
+              <span>📸</span> Instagram
+            </button>
+            <button class="platform-btn" id="btn-both" onclick="setPlatform('both')">
+              <span>◆</span> Both
+            </button>
+          </div>
+          <button class="post-btn" id="post-btn" onclick="publishPost()">
+            Publish Now →
+          </button>
+        </div>
+
+        <div class="publisher-status" id="publisher-status"></div>
+
+        <div style="margin-top:.85rem;font-size:11px;color:var(--txt3);line-height:1.6;display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--gold);flex-shrink:0">◆</span>
+          <span><strong style="color:var(--txt2)">How it works:</strong> Posts publish directly to the GoldLine Facebook Page. When a photo is attached and "Both" is selected, it also posts to GoldLine Instagram (@mbrealtor). Agents can then share the GoldLine post to their personal profiles. Instagram requires a photo — text-only posts go to Facebook only.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ONBOARDING DOCS ── -->
+  <div class="section-div"><div class="sdline"></div><div class="sdgem">◆</div><div class="sdline"></div></div>
+  <div class="phase-intro" style="padding-top:1.5rem">
+    <div style="font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:1rem">Onboarding Documents</div>
+  </div>
+  <div class="section" style="padding-top:0">
+    <div class="doc-grid">
+      <div class="doc-card">
+        <div class="doc-phase">Reference · Onboarding</div>
+        <div class="doc-name">GoldLine Agent Opportunity</div>
+        <div class="doc-desc">Complete fee structure, commission comparison tables, and everything you receive as a GoldLine agent from day one.</div>
+        <a class="doc-btn" href="#" onclick="openLink('https://docs.google.com/document/d/12SiOffg1WTTOoSZ2YzMfaUhLS8022dTo/edit?usp=drive_link');return false;">Download →</a>
+      </div>
+      <div class="doc-card">
+        <div class="doc-phase">Onboarding · Day 1</div>
+        <div class="doc-name">Your First 30 Days at GoldLine</div>
+        <div class="doc-desc">Step-by-step transition timeline, first closing fee breakdown, and what your business looks like at 30, 60, and 90 days.</div>
+        <a class="doc-btn" href="#" onclick="openLink('https://docs.google.com/document/d/1J1kkwIi428ffRmQhaJA-fiCjziVKbLJB/edit?usp=drive_link');return false;">Download →</a>
+      </div>
+    </div>
+    <div style="margin-top:1rem;background:var(--card);border:0.5px solid var(--brd);border-radius:var(--radius);padding:.9rem 1.1rem;font-size:12px;color:var(--txt3);line-height:1.6;display:flex;gap:10px;align-items:flex-start">
+      <span style="color:var(--gold);flex-shrink:0;margin-top:1px">◆</span>
+      <span><strong style="color:var(--txt2)">To activate downloads:</strong> Upload each .docx to Google Drive, set to "Anyone with link can view," copy the file ID from the share URL (the string between /d/ and /view), and replace PLACEHOLDER text in the HTML with the real IDs.</span>
+    </div>
+  </div>
+
+  <!-- ── QUICK REFERENCE ── -->
+  <div class="section-div"><div class="sdline"></div><div class="sdgem">◆</div><div class="sdline"></div></div>
+  <div class="phase-intro" style="padding-top:1.5rem">
+    <div style="font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:1rem">Quick Reference — Which GPT for What</div>
+  </div>
+  <div class="section" style="padding-top:0">
+    <div class="qr-grid">
+      <div class="qr-card">
+        <div class="qr-situation">Starting a new listing</div>
+        <div class="qr-gpt">→ Listing Launch Method™ Playbook</div>
+        <div class="qr-tip">Download the playbook first. It maps every phase from intake call to MLS Active — with the exact AI tool to use at each step.</div>
+      </div>
+      <div class="qr-card">
+        <div class="qr-situation">Writing a listing</div>
+        <div class="qr-gpt">→ Listing Domination GPT</div>
+        <div class="qr-tip">Give it the address, features, target buyer, and price. Ask for MLS + social + brochure versions.</div>
+      </div>
+      <div class="qr-card">
+        <div class="qr-situation">Listing appointment prep</div>
+        <div class="qr-gpt">→ Seller Psychology Engine + Simulator</div>
+        <div class="qr-tip">Run a practice session first. Then generate scarcity + timing scripts for the real appointment.</div>
+      </div>
+      <div class="qr-card">
+        <div class="qr-situation">Buyer objection</div>
+        <div class="qr-gpt">→ Conversion GPT</div>
+        <div class="qr-tip">Tell it the objection, client type, and medium. Get a word-for-word script instantly.</div>
+      </div>
+      <div class="qr-card">
+        <div class="qr-situation">Social media post</div>
+        <div class="qr-gpt">→ Brand Voice GPT (Phase 3)</div>
+        <div class="qr-tip">Tell it the platform, goal, and topic. On-brand GoldLine content with the right hashtags.</div>
+      </div>
+      <div class="qr-card">
+        <div class="qr-situation">Price reduction conversation</div>
+        <div class="qr-gpt">→ Seller Psychology Engine</div>
+        <div class="qr-tip">Use the loss aversion trigger. Provide days on market, current price, and target price.</div>
+      </div>
+      <div class="qr-card">
+        <div class="qr-situation">Open house follow-up</div>
+        <div class="qr-gpt">→ Conversion GPT + Open House Playbook</div>
+        <div class="qr-tip">Classify visitors by temperature, then generate personalized same-day follow-ups.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="max-width:920px;margin:0 auto;padding:0 2rem 2rem">
+    <div style="border-top:0.5px solid var(--brd);padding-top:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div class="footer-brand">
+        <div class="fd"></div>
+        <span class="footer-name">GoldLine Realty Partners</span>
+      </div>
+      <div class="footer-tag">GoldLine AI™ · Agent Advantage System · Northwest Houston</div>
+      <div style="display:flex;gap:16px">
+        <a href="/privacy.html" style="font-size:11px;color:var(--txt3);text-decoration:none">Privacy Policy</a>
+        <a href="/terms.html" style="font-size:11px;color:var(--txt3);text-decoration:none">Terms of Service</a>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+</div><!-- end hub -->
+
+<script>
+const PASS = atob('R0BsZEwhbjNSRVA=');
+
+// ── Social Publisher State ──
+let currentPlatform = 'facebook';
+let currentPhotoTab = 'upload';
+let selectedFileData = null;
+let selectedFileName = null;
+let selectedFileMime = null;
+
+function setPlatform(p) {
+  currentPlatform = p;
+  document.getElementById('btn-fb').className = 'platform-btn' + (p==='facebook' ? ' active-fb' : '');
+  document.getElementById('btn-ig').className = 'platform-btn' + (p==='instagram' ? ' active-ig' : '');
+  document.getElementById('btn-both').className = 'platform-btn' + (p==='both' ? ' active-both' : '');
+}
+
+function setPhotoTab(tab) {
+  currentPhotoTab = tab;
+  document.getElementById('tab-upload').className = 'photo-tab' + (tab==='upload' ? ' active' : '');
+  document.getElementById('tab-url').className = 'photo-tab' + (tab==='url' ? ' active' : '');
+  document.getElementById('photo-upload-panel').style.display = tab==='upload' ? 'block' : 'none';
+  document.getElementById('photo-url-panel').style.display = tab==='url' ? 'block' : 'none';
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) {
+    alert('Photo must be under 4MB. Please choose a smaller image.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    // Store base64 data (strip the data URL prefix)
+    selectedFileData = dataUrl.split(',')[1];
+    selectedFileName = file.name;
+    selectedFileMime = file.type;
+    // Show preview
+    document.getElementById('upload-placeholder').style.display = 'none';
+    document.getElementById('upload-preview').style.display = 'block';
+    document.getElementById('photo-preview-img').src = dataUrl;
+    document.getElementById('upload-area').classList.add('has-image');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  selectedFileData = null;
+  selectedFileName = null;
+  selectedFileMime = null;
+  document.getElementById('photo-file-input').value = '';
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('upload-area').classList.remove('has-image');
+}
+
+function updateCharCount() {
+  const len = document.getElementById('post-content').value.length;
+  document.getElementById('char-count').textContent = len;
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('publisher-status');
+  el.textContent = msg;
+  el.className = 'publisher-status ' + type;
+}
+
+async function publishPost() {
+  const content = document.getElementById('post-content').value.trim();
+  if (!content) { setStatus('Please enter some content before publishing.', 'error'); return; }
+
+  const btn = document.getElementById('post-btn');
+  btn.disabled = true;
+  btn.textContent = 'Publishing...';
+  setStatus('Sending to GoldLine accounts...', 'loading');
+
+  // Build payload
+  const payload = { message: content, platform: currentPlatform };
+
+  if (currentPhotoTab === 'upload' && selectedFileData) {
+    payload.imageData = selectedFileData;
+    payload.imageName = selectedFileName;
+    payload.imageMime = selectedFileMime;
+  } else if (currentPhotoTab === 'url') {
+    const urlVal = document.getElementById('photo-url-input').value.trim();
+    if (urlVal) payload.imageUrl = urlVal;
+  }
+
+  try {
+    const res = await fetch('/.netlify/functions/post-social', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    let msg = '';
+    let type = 'success';
+
+    if (currentPlatform === 'facebook' || currentPlatform === 'both') {
+      if (data.facebook?.success) {
+        msg += '✓ Posted to GoldLine Facebook Page. ';
+      } else if (data.facebook) {
+        msg += '✗ Facebook: ' + (data.facebook.error || 'Failed') + '. ';
+        type = 'error';
+      }
+    }
+    if (currentPlatform === 'both') {
+      if (data.instagram?.success) {
+        msg += '✓ Posted to GoldLine Instagram (@mbrealtor). ';
+      } else if (data.instagram) {
+        msg += '⚠ Instagram: ' + (data.instagram.error || 'Failed') + '. ';
+        if (type !== 'error') type = 'error';
+      }
+    }
+
+    setStatus(msg.trim() || 'Done!', type);
+
+    if (data.facebook?.success) {
+      document.getElementById('post-content').value = '';
+      updateCharCount();
+      removePhoto({ preventDefault: ()=>{}, stopPropagation: ()=>{} });
+      document.getElementById('photo-url-input').value = '';
+    }
+
+  } catch(e) {
+    setStatus('Connection error — please try again or contact MJ.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Publish Now →';
+}
+
+function openLink(url){
+  var w=window.open(url,'_blank');
+  if(!w){window.location.href=url;}
+}
+function doLogin(){
+  const val=document.getElementById('pw-input').value;
+  const err=document.getElementById('login-error');
+  if(val===PASS){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('hub-screen').style.display='block';
+    sessionStorage.setItem('gl_auth','1');
+    err.textContent='';
+  } else {
+    err.textContent='Incorrect access code. Contact MJ@GoldLineREP.com for access.';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+function doLogout(){
+  sessionStorage.removeItem('gl_auth');
+  document.getElementById('hub-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('pw-input').value='';
+}
+window.addEventListener('load',function(){
+  if(sessionStorage.getItem('gl_auth')==='1'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('hub-screen').style.display='block';
+  }
+});
+</script>
+</body>
+</html>
