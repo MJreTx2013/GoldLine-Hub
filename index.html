@@ -560,7 +560,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
               <input type="file" class="photo-upload-input" id="photo-file-input" accept="image/jpeg,image/png,image/gif,image/webp" onchange="handleFileSelect(event)">
               <div id="upload-placeholder">
                 <div class="photo-upload-icon">🖼️</div>
-                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 4MB</span></div>
+                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 1MB · Use squoosh.app to compress</span></div>
               </div>
               <div id="upload-preview" style="display:none">
                 <div class="photo-preview-wrap">
@@ -721,8 +721,8 @@ function setPhotoTab(tab) {
 function handleFileSelect(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 4 * 1024 * 1024) {
-    alert('Photo must be under 4MB. Please choose a smaller image.');
+  if (file.size > 1 * 1024 * 1024) {
+    alert('Photo must be under 1MB. Please compress the image before uploading.\n\nTip: Use a free tool like squoosh.app to reduce file size.');
     return;
   }
   const reader = new FileReader();
@@ -773,39 +773,26 @@ async function publishPost() {
   btn.textContent = 'Publishing...';
   setStatus('Sending to GoldLine accounts...', 'loading');
 
+  const payload = { message: content, platform: currentPlatform };
+
+  // Add image if present
+  if (currentPhotoTab === 'upload' && selectedFileData) {
+    payload.imageData = selectedFileData;
+    payload.imageName = selectedFileName;
+    payload.imageMime = selectedFileMime;
+  } else if (currentPhotoTab === 'url') {
+    const urlVal = document.getElementById('photo-url-input').value.trim();
+    if (urlVal) payload.imageUrl = urlVal;
+  }
+
   try {
-    let res, data;
+    const res = await fetch('/.netlify/functions/post-social', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-    // Check if we have a file upload
-    const fileInput = document.getElementById('photo-file-input');
-    const hasFile = currentPhotoTab === 'upload' && fileInput.files && fileInput.files[0];
-    const urlVal = currentPhotoTab === 'url' ? document.getElementById('photo-url-input').value.trim() : '';
-
-    if (hasFile) {
-      // Use FormData for file upload — bypasses JSON body size limits
-      const formData = new FormData();
-      formData.append('message', content);
-      formData.append('platform', currentPlatform);
-      formData.append('photo', fileInput.files[0]);
-
-      res = await fetch('/.netlify/functions/post-social', {
-        method: 'POST',
-        body: formData
-        // Note: DO NOT set Content-Type header — browser sets it automatically with boundary
-      });
-    } else {
-      // Text only or URL — use JSON as before
-      const payload = { message: content, platform: currentPlatform };
-      if (urlVal) payload.imageUrl = urlVal;
-
-      res = await fetch('/.netlify/functions/post-social', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    }
-
-    data = await res.json();
+    const data = await res.json();
     let msg = '';
     let type = 'success';
 
@@ -831,7 +818,7 @@ async function publishPost() {
     if (data.facebook?.success) {
       document.getElementById('post-content').value = '';
       updateCharCount();
-      removePhoto({ preventDefault: ()=>{}, stopPropagation: ()=>{} });
+      removePhoto({ preventDefault:()=>{}, stopPropagation:()=>{} });
       document.getElementById('photo-url-input').value = '';
     }
 
