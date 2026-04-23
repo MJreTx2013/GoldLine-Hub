@@ -533,49 +533,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
         <div class="publisher-icon">📲</div>
         <div>
           <div class="publisher-title">GoldLine Social Publisher</div>
-          <div class="publisher-sub">Step 2 — Paste your content below and post directly to GoldLine's accounts</div>
+          <div class="publisher-sub">Step 2 — Paste your content below and publish to GoldLine's Facebook Page</div>
         </div>
       </div>
       <div class="publisher-body">
         <textarea
           class="publisher-textarea"
           id="post-content"
-          placeholder="Paste your Brand Voice GPT content here, or write your post directly. This will publish to the GoldLine Facebook Page and/or Instagram account..."
+          placeholder="Paste your Brand Voice GPT content here, or write your post directly..."
           oninput="updateCharCount()"
           maxlength="2200"
         ></textarea>
         <div class="publisher-charcount"><span id="char-count">0</span> / 2200</div>
 
-        <!-- PHOTO SECTION -->
-        <div class="publisher-photo-section">
-          <span class="publisher-photo-label">📷 Attach a Photo (optional)</span>
-          <div class="publisher-photo-tabs">
-            <button class="photo-tab active" id="tab-upload" onclick="setPhotoTab('upload')">Upload File</button>
-            <button class="photo-tab" id="tab-url" onclick="setPhotoTab('url')">Image URL</button>
+        <div class="publisher-controls">
+          <div class="platform-btns">
+            <button class="platform-btn active-fb" id="btn-fb" onclick="setPlatform('facebook')">
+              <span>📘</span> Facebook
+            </button>
           </div>
-
-          <!-- Upload from device -->
-          <div id="photo-upload-panel">
-            <div class="photo-upload-area" id="upload-area">
-              <input type="file" class="photo-upload-input" id="photo-file-input" accept="image/jpeg,image/png,image/gif,image/webp" onchange="handleFileSelect(event)">
-              <div id="upload-placeholder">
-                <div class="photo-upload-icon">🖼️</div>
-                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 2.5MB · Compress at squoosh.app</span></div>
-              </div>
-              <div id="upload-preview" style="display:none">
-                <div class="photo-preview-wrap">
-                  <img id="photo-preview-img" class="photo-preview" src="" alt="Preview">
-                  <button class="photo-remove" onclick="removePhoto(event)" title="Remove photo">✕</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Image URL -->
-          <div id="photo-url-panel" style="display:none">
-            <input type="url" class="photo-url-input" id="photo-url-input" placeholder="https://example.com/your-photo.jpg — must be a publicly accessible image URL">
-          </div>
+          <button class="post-btn" id="post-btn" onclick="publishPost()">
+            Publish Now →
+          </button>
         </div>
+
+        <div class="publisher-status" id="publisher-status"></div>
+
+        <div style="margin-top:.85rem;font-size:11px;color:var(--txt3);line-height:1.6;display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--gold);flex-shrink:0">◆</span>
+          <span><strong style="color:var(--txt2)">How it works:</strong> Publishes your text post directly to the GoldLine Facebook Page. After posting, visit the page, add photos or listing links in the comments, then share the post to your personal profile.</span>
+        </div>
+      </div>
+    </div>
 
         <div class="publisher-controls">
           <div class="platform-btns">
@@ -696,61 +685,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
 <script>
 const PASS = atob('R0BsZEwhbjNSRVA=');
 
-// ── Social Publisher State ──
+// ── Social Publisher ──
 let currentPlatform = 'facebook';
-let currentPhotoTab = 'upload';
-let selectedFileData = null;
-let selectedFileName = null;
-let selectedFileMime = null;
 
 function setPlatform(p) {
   currentPlatform = p;
   document.getElementById('btn-fb').className = 'platform-btn' + (p==='facebook' ? ' active-fb' : '');
-  document.getElementById('btn-ig').className = 'platform-btn' + (p==='instagram' ? ' active-ig' : '');
-  document.getElementById('btn-both').className = 'platform-btn' + (p==='both' ? ' active-both' : '');
-}
-
-function setPhotoTab(tab) {
-  currentPhotoTab = tab;
-  document.getElementById('tab-upload').className = 'photo-tab' + (tab==='upload' ? ' active' : '');
-  document.getElementById('tab-url').className = 'photo-tab' + (tab==='url' ? ' active' : '');
-  document.getElementById('photo-upload-panel').style.display = tab==='upload' ? 'block' : 'none';
-  document.getElementById('photo-url-panel').style.display = tab==='url' ? 'block' : 'none';
-}
-
-function handleFileSelect(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 2.5 * 1024 * 1024) {
-    alert('Photo must be under 2.5MB.\n\nCompress it free at squoosh.app, or use the "Image URL" tab to paste a link from Google Drive or Dropbox instead.');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
-    // Store base64 data (strip the data URL prefix)
-    selectedFileData = dataUrl.split(',')[1];
-    selectedFileName = file.name;
-    selectedFileMime = file.type;
-    // Show preview
-    document.getElementById('upload-placeholder').style.display = 'none';
-    document.getElementById('upload-preview').style.display = 'block';
-    document.getElementById('photo-preview-img').src = dataUrl;
-    document.getElementById('upload-area').classList.add('has-image');
-  };
-  reader.readAsDataURL(file);
-}
-
-function removePhoto(event) {
-  event.preventDefault();
-  event.stopPropagation();
-  selectedFileData = null;
-  selectedFileName = null;
-  selectedFileMime = null;
-  document.getElementById('photo-file-input').value = '';
-  document.getElementById('upload-placeholder').style.display = 'block';
-  document.getElementById('upload-preview').style.display = 'none';
-  document.getElementById('upload-area').classList.remove('has-image');
 }
 
 function updateCharCount() {
@@ -767,88 +707,31 @@ function setStatus(msg, type) {
 async function publishPost() {
   const content = document.getElementById('post-content').value.trim();
   if (!content) { setStatus('Please enter some content before publishing.', 'error'); return; }
-
   const btn = document.getElementById('post-btn');
   btn.disabled = true;
   btn.textContent = 'Publishing...';
-  setStatus('Sending to GoldLine accounts...', 'loading');
-
-  const fileInput = document.getElementById('photo-file-input');
-  const hasFile = currentPhotoTab === 'upload' && fileInput.files && fileInput.files[0];
-  const urlVal = currentPhotoTab === 'url' ? document.getElementById('photo-url-input').value.trim() : '';
-
+  setStatus('Sending to GoldLine Facebook Page...', 'loading');
   try {
-    let payload = { message: content, platform: currentPlatform };
-
-    if (hasFile) {
-      // Convert to base64 and send — Netlify function handles the Facebook upload
-      const file = fileInput.files[0];
-
-      // Pre-flight size check — base64 inflates by ~33%, Netlify limit is ~6MB
-      // Keep total payload under 4MB to be safe
-      if (file.size > 2.5 * 1024 * 1024) {
-        setStatus('✗ Photo too large — please compress below 2.5MB at squoosh.app then try again, or use the Image URL tab instead.', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Publish Now →';
-        return;
-      }
-
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-
-      // Check base64 payload size
-      const payloadSize = base64.length + content.length + 200; // rough estimate
-      if (payloadSize > 4 * 1024 * 1024) {
-        setStatus('✗ Photo still too large after encoding. Please use the Image URL tab instead — upload your photo to Google Drive and paste the direct link.', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Publish Now →';
-        return;
-      }
-
-      payload.imageData = base64;
-      payload.imageName = file.name;
-      payload.imageMime = file.type;
-    } else if (urlVal) {
-      payload.imageUrl = urlVal;
-    }
-
     const res = await fetch('/.netlify/functions/post-social', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ message: content, platform: 'facebook' })
     });
-
     const data = await res.json();
-    let msg = '';
-    let type = 'success';
-
-    if (currentPlatform === 'facebook' || currentPlatform === 'both') {
-      if (data.facebook?.success) { msg += '✓ Posted to GoldLine Facebook Page. '; }
-      else if (data.facebook) { msg += '✗ Facebook: ' + (data.facebook.error || 'Failed') + '. '; type = 'error'; }
-    }
-    if (currentPlatform === 'both') {
-      if (data.instagram?.success) { msg += '✓ Posted to GoldLine Instagram (@mbrealtor). '; }
-      else if (data.instagram) { msg += '⚠ Instagram: ' + (data.instagram.error || 'Failed') + '. '; if(type!=='error') type='error'; }
-    }
-
-    setStatus(msg.trim() || 'Done!', type);
-
     if (data.facebook?.success) {
+      setStatus('\u2713 Posted to GoldLine Facebook Page! Visit the page to add photos, then share to your profile.', 'success');
       document.getElementById('post-content').value = '';
       updateCharCount();
-      removePhoto({ preventDefault:()=>{}, stopPropagation:()=>{} });
-      document.getElementById('photo-url-input').value = '';
+    } else if (data.facebook) {
+      setStatus('\u2717 ' + (data.facebook.error || 'Post failed \u2014 try again'), 'error');
+    } else {
+      setStatus('\u2717 Unexpected error \u2014 please try again', 'error');
     }
-
   } catch(e) {
-    setStatus('Connection error — please try again or contact MJ.', 'error');
+    setStatus('Connection error \u2014 please try again or contact MJ.', 'error');
   }
-
   btn.disabled = false;
-  btn.textContent = 'Publish Now →';
+  btn.textContent = 'Publish Now \u2192';
 }
 
 function openLink(url){
