@@ -94,8 +94,18 @@ exports.handler = async (event) => {
   try {
     body = JSON.parse(event.body);
   } catch(e) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON body' }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON body', details: e.message, bodyLength: event.body ? event.body.length : 0 }) };
   }
+
+  // Debug: log what arrived
+  console.log('post-social called:', {
+    platform: body.platform,
+    messageLength: body.message?.length,
+    hasImageData: !!body.imageData,
+    imageDataLength: body.imageData?.length,
+    hasImageUrl: !!body.imageUrl,
+    bodySize: event.body?.length
+  });
 
   const { message, platform, imageData, imageUrl, imageName, imageMime } = body;
 

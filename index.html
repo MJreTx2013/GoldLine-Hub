@@ -560,7 +560,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--txt);m
               <input type="file" class="photo-upload-input" id="photo-file-input" accept="image/jpeg,image/png,image/gif,image/webp" onchange="handleFileSelect(event)">
               <div id="upload-placeholder">
                 <div class="photo-upload-icon">🖼️</div>
-                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 1MB · Use squoosh.app to compress</span></div>
+                <div class="photo-upload-text">Click or drag a photo here<br><span style="font-size:11px">JPG, PNG, GIF, WEBP · Max 2.5MB · Compress at squoosh.app</span></div>
               </div>
               <div id="upload-preview" style="display:none">
                 <div class="photo-preview-wrap">
@@ -721,8 +721,8 @@ function setPhotoTab(tab) {
 function handleFileSelect(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 1 * 1024 * 1024) {
-    alert('Photo must be under 1MB. Please compress the image before uploading.\n\nTip: Use a free tool like squoosh.app to reduce file size.');
+  if (file.size > 2.5 * 1024 * 1024) {
+    alert('Photo must be under 2.5MB.\n\nCompress it free at squoosh.app, or use the "Image URL" tab to paste a link from Google Drive or Dropbox instead.');
     return;
   }
   const reader = new FileReader();
@@ -783,11 +783,31 @@ async function publishPost() {
     if (hasFile) {
       // Convert to base64 and send — Netlify function handles the Facebook upload
       const file = fileInput.files[0];
+
+      // Pre-flight size check — base64 inflates by ~33%, Netlify limit is ~6MB
+      // Keep total payload under 4MB to be safe
+      if (file.size > 2.5 * 1024 * 1024) {
+        setStatus('✗ Photo too large — please compress below 2.5MB at squoosh.app then try again, or use the Image URL tab instead.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Publish Now →';
+        return;
+      }
+
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result.split(',')[1]);
         reader.readAsDataURL(file);
       });
+
+      // Check base64 payload size
+      const payloadSize = base64.length + content.length + 200; // rough estimate
+      if (payloadSize > 4 * 1024 * 1024) {
+        setStatus('✗ Photo still too large after encoding. Please use the Image URL tab instead — upload your photo to Google Drive and paste the direct link.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Publish Now →';
+        return;
+      }
+
       payload.imageData = base64;
       payload.imageName = file.name;
       payload.imageMime = file.type;
