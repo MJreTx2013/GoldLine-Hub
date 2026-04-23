@@ -88,26 +88,37 @@ exports.handler = async (event) => {
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
-  if (!PAGE_ID || !PAGE_TOKEN) return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server config error — contact MJ' }) };
+  if (!PAGE_ID || !PAGE_TOKEN) return { statusCode: 500, headers, body: JSON.stringify({ error: 'Missing FB_PAGE_ID or FB_PAGE_TOKEN environment variables' }) };
+
+  // Log incoming request details
+  const bodyLength = event.body ? event.body.length : 0;
+  console.log('Request received:', {
+    bodyLength,
+    isBase64Encoded: event.isBase64Encoded,
+    contentType: event.headers['content-type'] || event.headers['Content-Type']
+  });
 
   let body;
   try {
-    body = JSON.parse(event.body);
+    const rawBody = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf8')
+      : event.body;
+    body = JSON.parse(rawBody);
   } catch(e) {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON body', details: e.message, bodyLength: event.body ? event.body.length : 0 }) };
+    console.log('JSON parse failed:', e.message, 'body preview:', event.body ? event.body.substring(0, 200) : 'empty');
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON: ' + e.message }) };
   }
 
-  // Debug: log what arrived
-  console.log('post-social called:', {
-    platform: body.platform,
-    messageLength: body.message?.length,
-    hasImageData: !!body.imageData,
-    imageDataLength: body.imageData?.length,
-    hasImageUrl: !!body.imageUrl,
-    bodySize: event.body?.length
-  });
-
   const { message, platform, imageData, imageUrl, imageName, imageMime } = body;
+
+  console.log('Parsed body:', {
+    platform,
+    messageLength: message?.length,
+    hasImageData: !!imageData,
+    imageDataLength: imageData?.length,
+    hasImageUrl: !!imageUrl,
+    imageUrl: imageUrl ? imageUrl.substring(0, 80) : null
+  });
 
   if (!message || !message.trim()) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Message is required' }) };
@@ -116,22 +127,23 @@ exports.handler = async (event) => {
   const results = {};
   let fbPhotoUrl = null;
 
-  // ── INSTAGRAM ONLY ──
+  // ── INSTAGRAM ONLY (called after Facebook photo post) ──
   if (platform === 'instagram_only') {
-    const igImageUrl = imageUrl;
-    if (!igImageUrl) {
-      return { statusCode: 400, headers, body: JSON.stringify({ instagram: { success: false, error: 'Image URL required for Instagram' } }) };
+    if (!imageUrl) {
+      return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: 'Image URL required' } }) };
     }
     try {
       const igAccountRes = await getJSON(`https://graph.facebook.com/v25.0/${PAGE_ID}?fields=instagram_business_account&access_token=${PAGE_TOKEN}`);
       const igId = igAccountRes?.instagram_business_account?.id;
+      console.log('Instagram account ID:', igId);
       if (!igId) {
         return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: 'Instagram Business Account not connected' } }) };
       }
       const containerRes = await postJSON(
         `https://graph.facebook.com/v25.0/${igId}/media`,
-        { image_url: igImageUrl, caption: message.trim(), access_token: PAGE_TOKEN }
+        { image_url: imageUrl, caption: message.trim(), access_token: PAGE_TOKEN }
       );
+      console.log('Instagram container:', containerRes);
       if (!containerRes.id) {
         return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: containerRes.error?.message || 'Container failed' } }) };
       }
@@ -139,10 +151,12 @@ exports.handler = async (event) => {
         `https://graph.facebook.com/v25.0/${igId}/media_publish`,
         { creation_id: containerRes.id, access_token: PAGE_TOKEN }
       );
+      console.log('Instagram publish:', publishRes);
       return { statusCode: 200, headers, body: JSON.stringify({
         instagram: publishRes.id ? { success: true, id: publishRes.id } : { success: false, error: publishRes.error?.message || 'Publish failed' }
       })};
     } catch(e) {
+      console.log('Instagram error:', e.message);
       return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: e.message } }) };
     }
   }
@@ -151,16 +165,18 @@ exports.handler = async (event) => {
   if (platform === 'facebook' || platform === 'both') {
     try {
       if (imageData) {
-        // Photo upload via base64
+        console.log('Uploading photo via base64, size:', imageData.length);
         const imageBuffer = Buffer.from(imageData, 'base64');
-        const fname = imageName || 'photo.jpg';
-        const fmime = imageMime || 'image/jpeg';
+        console.log('Buffer size:', imageBuffer.length);
 
         const fbRes = await postMultipart(
           `https://graph.facebook.com/v25.0/${PAGE_ID}/photos`,
           { caption: message.trim(), access_token: PAGE_TOKEN },
-          imageBuffer, fname, fmime
+          imageBuffer,
+          imageName || 'photo.jpg',
+          imageMime || 'image/jpeg'
         );
+        console.log('Facebook photo upload result:', fbRes);
 
         if (fbRes.id) {
           results.facebook = { success: true, id: fbRes.id };
@@ -168,17 +184,22 @@ exports.handler = async (event) => {
             const photoData = await getJSON(`https://graph.facebook.com/v25.0/${fbRes.id}?fields=images&access_token=${PAGE_TOKEN}`);
             if (photoData.images && photoData.images.length > 0) {
               fbPhotoUrl = photoData.images[0].source;
+              console.log('Got FB photo URL for Instagram:', fbPhotoUrl ? 'yes' : 'no');
             }
-          } catch(e) {}
+          } catch(e) { console.log('Could not get photo URL:', e.message); }
         } else {
           results.facebook = { success: false, error: fbRes.error?.message || 'Photo upload failed' };
+          console.log('Photo upload failed:', fbRes);
         }
 
       } else if (imageUrl) {
+        console.log('Posting photo via URL:', imageUrl.substring(0, 80));
         const fbRes = await postJSON(
           `https://graph.facebook.com/v25.0/${PAGE_ID}/photos`,
           { caption: message.trim(), url: imageUrl, access_token: PAGE_TOKEN }
         );
+        console.log('Facebook URL photo result:', fbRes);
+
         if (fbRes.id) {
           results.facebook = { success: true, id: fbRes.id };
           fbPhotoUrl = imageUrl;
@@ -187,11 +208,13 @@ exports.handler = async (event) => {
         }
 
       } else {
-        // Text only
+        console.log('Text-only post');
         const fbRes = await postJSON(
           `https://graph.facebook.com/v25.0/${PAGE_ID}/feed`,
           { message: message.trim(), access_token: PAGE_TOKEN }
         );
+        console.log('Facebook text post result:', fbRes);
+
         if (fbRes.id) {
           results.facebook = { success: true, id: fbRes.id };
         } else {
@@ -199,11 +222,12 @@ exports.handler = async (event) => {
         }
       }
     } catch(e) {
+      console.log('Facebook error:', e.message);
       results.facebook = { success: false, error: e.message };
     }
   }
 
-  // ── INSTAGRAM ──
+  // ── INSTAGRAM (via Facebook photo URL) ──
   if (platform === 'both') {
     const igImageUrl = fbPhotoUrl || imageUrl;
     if (!igImageUrl) {
@@ -237,5 +261,6 @@ exports.handler = async (event) => {
     }
   }
 
+  console.log('Final results:', results);
   return { statusCode: 200, headers, body: JSON.stringify(results) };
 };
