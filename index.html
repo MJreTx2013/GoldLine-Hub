@@ -773,19 +773,28 @@ async function publishPost() {
   btn.textContent = 'Publishing...';
   setStatus('Sending to GoldLine accounts...', 'loading');
 
-  const payload = { message: content, platform: currentPlatform };
-
-  // Add image if present
-  if (currentPhotoTab === 'upload' && selectedFileData) {
-    payload.imageData = selectedFileData;
-    payload.imageName = selectedFileName;
-    payload.imageMime = selectedFileMime;
-  } else if (currentPhotoTab === 'url') {
-    const urlVal = document.getElementById('photo-url-input').value.trim();
-    if (urlVal) payload.imageUrl = urlVal;
-  }
+  const fileInput = document.getElementById('photo-file-input');
+  const hasFile = currentPhotoTab === 'upload' && fileInput.files && fileInput.files[0];
+  const urlVal = currentPhotoTab === 'url' ? document.getElementById('photo-url-input').value.trim() : '';
 
   try {
+    let payload = { message: content, platform: currentPlatform };
+
+    if (hasFile) {
+      // Convert to base64 and send — Netlify function handles the Facebook upload
+      const file = fileInput.files[0];
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      payload.imageData = base64;
+      payload.imageName = file.name;
+      payload.imageMime = file.type;
+    } else if (urlVal) {
+      payload.imageUrl = urlVal;
+    }
+
     const res = await fetch('/.netlify/functions/post-social', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -797,20 +806,12 @@ async function publishPost() {
     let type = 'success';
 
     if (currentPlatform === 'facebook' || currentPlatform === 'both') {
-      if (data.facebook?.success) {
-        msg += '✓ Posted to GoldLine Facebook Page. ';
-      } else if (data.facebook) {
-        msg += '✗ Facebook: ' + (data.facebook.error || 'Failed') + '. ';
-        type = 'error';
-      }
+      if (data.facebook?.success) { msg += '✓ Posted to GoldLine Facebook Page. '; }
+      else if (data.facebook) { msg += '✗ Facebook: ' + (data.facebook.error || 'Failed') + '. '; type = 'error'; }
     }
     if (currentPlatform === 'both') {
-      if (data.instagram?.success) {
-        msg += '✓ Posted to GoldLine Instagram (@mbrealtor). ';
-      } else if (data.instagram) {
-        msg += '⚠ Instagram: ' + (data.instagram.error || 'Failed') + '. ';
-        if (type !== 'error') type = 'error';
-      }
+      if (data.instagram?.success) { msg += '✓ Posted to GoldLine Instagram (@mbrealtor). '; }
+      else if (data.instagram) { msg += '⚠ Instagram: ' + (data.instagram.error || 'Failed') + '. '; if(type!=='error') type='error'; }
     }
 
     setStatus(msg.trim() || 'Done!', type);

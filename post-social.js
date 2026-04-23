@@ -106,6 +106,37 @@ exports.handler = async (event) => {
   const results = {};
   let fbPhotoUrl = null;
 
+  // ── INSTAGRAM ONLY ──
+  if (platform === 'instagram_only') {
+    const igImageUrl = imageUrl;
+    if (!igImageUrl) {
+      return { statusCode: 400, headers, body: JSON.stringify({ instagram: { success: false, error: 'Image URL required for Instagram' } }) };
+    }
+    try {
+      const igAccountRes = await getJSON(`https://graph.facebook.com/v25.0/${PAGE_ID}?fields=instagram_business_account&access_token=${PAGE_TOKEN}`);
+      const igId = igAccountRes?.instagram_business_account?.id;
+      if (!igId) {
+        return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: 'Instagram Business Account not connected' } }) };
+      }
+      const containerRes = await postJSON(
+        `https://graph.facebook.com/v25.0/${igId}/media`,
+        { image_url: igImageUrl, caption: message.trim(), access_token: PAGE_TOKEN }
+      );
+      if (!containerRes.id) {
+        return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: containerRes.error?.message || 'Container failed' } }) };
+      }
+      const publishRes = await postJSON(
+        `https://graph.facebook.com/v25.0/${igId}/media_publish`,
+        { creation_id: containerRes.id, access_token: PAGE_TOKEN }
+      );
+      return { statusCode: 200, headers, body: JSON.stringify({
+        instagram: publishRes.id ? { success: true, id: publishRes.id } : { success: false, error: publishRes.error?.message || 'Publish failed' }
+      })};
+    } catch(e) {
+      return { statusCode: 200, headers, body: JSON.stringify({ instagram: { success: false, error: e.message } }) };
+    }
+  }
+
   // ── FACEBOOK ──
   if (platform === 'facebook' || platform === 'both') {
     try {
